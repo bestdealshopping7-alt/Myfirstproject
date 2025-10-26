@@ -1,0 +1,277 @@
+<!--
+BestDeal - Single-file Affiliate Marketing Website
+File: bestdeal_affiliate_index.html
+How to use:
+1. Save this file as `index.html` on your phone or computer.
+2. Open it in a browser to preview (double-tap/open the file).
+3. Click "Admin" (password: admin123) to add, edit, delete products.
+4. Products are saved to browser localStorage so changes persist on the same device.
+
+Quick hosting options:
+- GitHub Pages: create a repo, upload this file as index.html to the repo root, enable Pages from the main branch. URL will be https://<your-username>.github.io/<repo-name>/
+- Netlify: Drag & drop this file into Netlify's site deploy panel (or connect Git repo) and it will host it.
+- Vercel: Upload to a new project or connect Git repo.
+
+Notes:
+- Replace the logo text or <img id="logo-img"> with your own image file when hosting.
+- Affiliate links should be full URLs (including https://). Use your affiliate IDs.
+- You can export the product JSON from Admin > Export JSON and then import it on another machine via Admin > Import JSON.
+
+Security: This is a static single-file site using localStorage. For multi-user editing or central hosting with a backend, you'll need a server/database.
+
+--> <!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BestDeal — Top Affiliate Products</title>
+  <meta name="description" content="BestDeal - curated affiliate deals. Add your own products and paste affiliate links.">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#06b6d4;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Roboto,Arial;margin:0;background:linear-gradient(180deg,#071022 0%, #071633 70%);color:#e6eef6}
+    header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,0.03);backdrop-filter:blur(6px)}
+    .brand{display:flex;gap:12px;align-items:center}
+    #logo{width:46px;height:46px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#042022;font-weight:700}
+    h1{font-size:18px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer}
+    .btn:hover{color:#fff}
+    .container{padding:20px;max-width:1100px;margin:20px auto}
+    .searchbar{display:flex;gap:8px;margin-bottom:16px}
+    input,select{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:8px}
+    .thumb{height:140px;border-radius:8px;background:#081426;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .thumb img{max-width:100%;max-height:100%;object-fit:cover}
+    .title{font-weight:600;font-size:15px}
+    .price{font-weight:700;color:var(--accent)}
+    .meta{color:var(--muted);font-size:13px}
+    .actions{display:flex;gap:8px;margin-top:auto}
+    .actions .buy{flex:1;background:linear-gradient(90deg,var(--accent),#3b82f6);border:none;padding:10px;border-radius:8px;color:#042022;font-weight:700}
+    .small{padding:6px 8px;border-radius:8px;font-size:13px}
+    footer{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+    /* admin modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(0,0,0,0.6),rgba(0,0,0,0.6))}
+    .modal .panel{width:920px;max-width:95%;background:#071426;padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04)}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    textarea{min-height:88px}
+    .actions-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+    .pill{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:999px;font-size:13px}
+    .topbar{display:flex;gap:8px;align-items:center}
+    @media(max-width:700px){.form-grid{grid-template-columns:1fr}.grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div id="logo">BD</div>
+      <div>
+        <h1>BestDeal</h1>
+        <div style="font-size:12px;color:var(--muted)">Curated affiliate deals — add your products, paste affiliate links</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="pill" id="stats">0 products</div>
+      <button class="btn" id="adminBtn">Admin</button>
+      <button class="btn" id="importBtn">Import</button>
+      <button class="btn" id="exportBtn">Export</button>
+    </div>
+  </header>  <main class="container">
+    <div class="searchbar">
+      <input id="search" placeholder="Search products, brands or tags..." />
+      <select id="sort">
+        <option value="new">Newest</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="price-desc">Price: High → Low</option>
+      </select>
+      <input id="filterCat" placeholder="Filter by category (e.g. Electronics)" />
+      <button class="btn" id="clearFilters">Clear</button>
+    </div><div class="grid" id="productGrid"></div>
+
+  </main>  <footer>
+    Made with ♥ — Edit products via Admin. Host on GitHub Pages or Netlify.
+  </footer>  <!-- Admin Modal -->  <div class="modal" id="modal">
+    <div class="panel">
+      <div class="topbar">
+        <div style="flex:1"><strong id="modalTitle">Admin</strong></div>
+        <div style="display:flex;gap:8px">
+          <input id="adminPass" placeholder="Password" type="password" class="small" style="width:140px" />
+          <button id="loginBtn" class="small">Login</button>
+          <button id="closeModal" class="small">Close</button>
+        </div>
+      </div><div id="adminArea" style="display:none;margin-top:12px">
+    <div style="display:flex;gap:8px;margin-bottom:8px"><button id="addProduct" class="btn">+ Add product</button><button id="bulkImport" class="btn">Bulk import JSON</button><button id="clearAll" class="btn">Clear all</button></div>
+    <div id="productList" style="max-height:320px;overflow:auto;padding:6px;display:grid;gap:8px"></div>
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:12px 0" />
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="saveChanges" class="btn">Save to device</button>
+      <button id="exportJSON" class="btn">Export JSON</button>
+      <label for="importFile" class="btn" style="cursor:pointer">Choose JSON</label>
+      <input type="file" id="importFile" accept="application/json" style="display:none" />
+    </div>
+  </div>
+
+  <div id="editor" style="display:none;margin-top:12px">
+    <div style="font-weight:700;margin-bottom:8px">Edit product</div>
+    <div class="form-grid">
+      <input id="p_title" placeholder="Product title" />
+      <input id="p_price" placeholder="Price (e.g. ₹999)" />
+      <input id="p_category" placeholder="Category" />
+      <input id="p_afflink" placeholder="Affiliate link (https://...)" />
+      <input id="p_img" placeholder="Image URL" />
+      <input id="p_tag" placeholder="Tags (comma separated)" />
+      <textarea id="p_desc" placeholder="Short description"></textarea>
+      <div></div>
+    </div>
+    <div class="actions-row">
+      <button id="deleteProduct" class="btn">Delete</button>
+      <button id="cancelEdit" class="btn">Cancel</button>
+      <button id="saveProduct" class="btn">Save</button>
+    </div>
+  </div>
+
+</div>
+
+  </div>  <script>
+    // Basic product structure: {id,title,price,category,afflink,img,desc,tags,created}
+    const LS_KEY = 'bestdeal_products_v1';
+    let products = [];
+    let editingId = null;
+    const sample = [
+      {id:genId(),title:'Wireless Earbuds X',price:'₹1,499',category:'Electronics',afflink:'https://www.amazon.in/',img:'https://placehold.co/600x400?text=Earbuds',desc:'Compact true wireless earbuds with long battery life.',tags:['audio','earbuds'],created:Date.now()},
+      {id:genId(),title:'Smartwatch Pro',price:'₹3,799',category:'Wearables',afflink:'https://www.flipkart.com/',img:'https://placehold.co/600x400?text=Smartwatch',desc:'Fitness tracking, notifications & heart-rate monitor.',tags:['watch','fitness'],created:Date.now()-86400000}
+    ];
+
+    function genId(){return 'p_'+Math.random().toString(36).slice(2,9)}
+
+    function load(){
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){
+        try{products = JSON.parse(raw)}catch(e){products = sample;}
+      } else {products = sample}
+      render();
+    }
+
+    function save(){localStorage.setItem(LS_KEY,JSON.stringify(products));render();}
+
+    function render(){
+      const grid = document.getElementById('productGrid');grid.innerHTML='';
+      const stats = document.getElementById('stats');stats.textContent = products.length + (products.length===1?' product':' products');
+      // filters
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const catFilter = document.getElementById('filterCat').value.trim().toLowerCase();
+      const sort = document.getElementById('sort').value;
+      let list = products.slice();
+      if(q) list = list.filter(p=> (p.title+p.desc+(p.tags||[]).join(' ') + p.category).toLowerCase().includes(q));
+      if(catFilter) list = list.filter(p=> (p.category||'').toLowerCase().includes(catFilter));
+      if(sort==='price-asc') list.sort((a,b)=>extractPrice(a.price)-extractPrice(b.price));
+      if(sort==='price-desc') list.sort((a,b)=>extractPrice(b.price)-extractPrice(a.price));
+      if(sort==='new') list.sort((a,b)=>b.created - a.created);
+
+      list.forEach(p=>{
+        const card = document.createElement('div');card.className='card';
+        card.innerHTML = `
+          <div class="thumb"><img src="${p.img||'https://placehold.co/600x400?text=No+Image'}" alt="${escapeHtml(p.title)}" onerror="this.src='https://placehold.co/600x400?text=No+Image'"></div>
+          <div class="title">${escapeHtml(p.title)}</div>
+          <div class="meta">${escapeHtml(p.category||'')} • <span class="price">${escapeHtml(p.price||'')}</span></div>
+          <div style="font-size:13px;color:var(--muted);min-height:38px">${escapeHtml(p.desc||'')}</div>
+          <div class="actions">
+            <button class="small" onclick="openLink('${p.afflink}')">Open</button>
+            <button class="buy" onclick="openAffiliate('${p.afflink}')">Buy now</button>
+            <button class="small" onclick="editProduct('${p.id}')">Edit</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openLink(url){ if(!url) return alert('No link provided'); window.open(url,'_blank'); }
+    function openAffiliate(url){ if(!url) return alert('No link provided'); window.open(url,'_blank'); }
+
+    function extractPrice(str){ if(!str) return 0; try{ const n = str.replace(/[^0-9.]/g,''); return parseFloat(n)||0 }catch(e){return 0}}
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]) }
+
+    // admin UI
+    document.getElementById('adminBtn').addEventListener('click',()=>{document.getElementById('modal').style.display='flex';document.getElementById('adminPass').value='';document.getElementById('modalTitle').textContent='Admin — login required';document.getElementById('adminArea').style.display='none';document.getElementById('editor').style.display='none';});
+    document.getElementById('closeModal').addEventListener('click',()=>{document.getElementById('modal').style.display='none'});
+
+    document.getElementById('loginBtn').addEventListener('click',()=>{
+      const p = document.getElementById('adminPass').value;
+      if(p==='admin123'){ document.getElementById('adminArea').style.display='block'; document.getElementById('editor').style.display='none'; document.getElementById('modalTitle').textContent='Admin'; populateAdminList(); }
+      else alert('Wrong password. (Hint: admin123)');
+    });
+
+    function populateAdminList(){
+      const list = document.getElementById('productList'); list.innerHTML='';
+      products.slice().reverse().forEach(p=>{
+        const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.justifyContent='space-between'; row.style.gap='8px';
+        row.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><img src="${p.img||'https://placehold.co/80x60'}" style="width:76px;height:54px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.03)" onerror="this.src='https://placehold.co/80x60'"><div style="min-width:160px"><div style="font-weight:700">${escapeHtml(p.title)}</div><div style="font-size:13px;color:var(--muted)">${escapeHtml(p.category||'')}</div></div></div><div style="display:flex;gap:6px"><button class="small" onclick="editProduct('${p.id}')">Edit</button><button class="small" onclick="duplicateProduct('${p.id}')">Copy</button></div>`;
+        list.appendChild(row);
+      });
+    }
+
+    window.editProduct = function(id){ editingId = id; const p = products.find(x=>x.id===id); if(!p) return; document.getElementById('editor').style.display='block'; document.getElementById('adminArea').style.display='none';
+      document.getElementById('p_title').value = p.title || '';
+      document.getElementById('p_price').value = p.price || '';
+      document.getElementById('p_category').value = p.category || '';
+      document.getElementById('p_afflink').value = p.afflink || '';
+      document.getElementById('p_img').value = p.img || '';
+      document.getElementById('p_desc').value = p.desc || '';
+      document.getElementById('p_tag').value = (p.tags||[]).join(',');
+    }
+
+    document.getElementById('addProduct').addEventListener('click',()=>{
+      const p = {id:genId(),title:'New product',price:'',category:'',afflink:'',img:'',desc:'',tags:[],created:Date.now()}; products.push(p); save(); populateAdminList(); editProduct(p.id);
+    });
+
+    document.getElementById('saveProduct').addEventListener('click',()=>{
+      const idx = products.findIndex(x=>x.id===editingId);
+      if(idx===-1) return alert('Product not found');
+      products[idx].title = document.getElementById('p_title').value.trim() || 'Untitled';
+      products[idx].price = document.getElementById('p_price').value.trim();
+      products[idx].category = document.getElementById('p_category').value.trim();
+      products[idx].afflink = document.getElementById('p_afflink').value.trim();
+      products[idx].img = document.getElementById('p_img').value.trim();
+      products[idx].desc = document.getElementById('p_desc').value.trim();
+      products[idx].tags = document.getElementById('p_tag').value.split(',').map(s=>s.trim()).filter(Boolean);
+      save(); document.getElementById('editor').style.display='none'; document.getElementById('adminArea').style.display='block'; populateAdminList();
+    });
+
+    document.getElementById('cancelEdit').addEventListener('click',()=>{document.getElementById('editor').style.display='none';document.getElementById('adminArea').style.display='block';});
+    document.getElementById('deleteProduct').addEventListener('click',()=>{
+      if(!confirm('Delete this product?')) return; products = products.filter(x=>x.id!==editingId); editingId=null; save(); document.getElementById('editor').style.display='none'; document.getElementById('adminArea').style.display='block'; populateAdminList();
+    });
+
+    window.duplicateProduct = function(id){ const p = products.find(x=>x.id===id); if(!p) return; const copy = JSON.parse(JSON.stringify(p)); copy.id = genId(); copy.title += ' (copy)'; copy.created = Date.now(); products.push(copy); save(); populateAdminList(); }
+
+    document.getElementById('saveChanges').addEventListener('click',()=>{ save(); alert('Saved to device (localStorage)'); });
+    document.getElementById('clearAll').addEventListener('click',()=>{ if(confirm('Remove all products?')){ products=[]; save(); populateAdminList(); }});
+
+    // import/export
+    document.getElementById('exportJSON').addEventListener('click',()=>{
+      const data = JSON.stringify(products, null, 2); const blob = new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bestdeal_products.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('importFile').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=function(){ try{ const j=JSON.parse(r.result); if(Array.isArray(j)){ products=j; save(); populateAdminList(); alert('Imported'); } else alert('Invalid JSON'); }catch(err){alert('Invalid JSON file')} } ; r.readAsText(f); });
+
+    document.getElementById('importBtn').addEventListener('click',()=>{ document.getElementById('importFile').click(); });
+    document.getElementById('exportBtn').addEventListener('click',()=>{ document.getElementById('exportJSON').click(); });
+
+    // search/sort
+    document.getElementById('search').addEventListener('input',()=>render());
+    document.getElementById('filterCat').addEventListener('input',()=>render());
+    document.getElementById('sort').addEventListener('change',()=>render());
+    document.getElementById('clearFilters').addEventListener('click',()=>{document.getElementById('search').value='';document.getElementById('filterCat').value='';document.getElementById('sort').value='new';render();});
+
+    // export quick
+    document.getElementById('exportBtn').addEventListener('click',()=>{ const data = JSON.stringify(products, null, 2); const blob = new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bestdeal_products.json'; a.click(); URL.revokeObjectURL(url); });
+
+    // helper for mobile: enable long-press copy of affiliate link (not implemented here) - placeholder
+
+    // initialize
+    load();
+  </script></body>
+</html>
